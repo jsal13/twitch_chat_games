@@ -31,46 +31,37 @@ watch(puzzleData, async (newData: { category: string, puzzle: string }) => {
   category.value = newData.category.toUpperCase();
 })
 
-// Create an N ms delay.
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
-
 const client = new tmi.Client({
   channels: ['melat0nin']
 });
 
 client.connect();
-client.on('message', (channel: string, tags: string[], message, self) => {
-  if (message === "!reset") {
+client.on('message', (channel, tags, message, self) => {
+  let guess: string = message.trim().toUpperCase()
+  console.log(guess)
+  if (guess === "!RESET") {
     resetGame();
-  }
-  const args: string = message
-  const letter = args.trim().toUpperCase()
-  if (letter?.length === 1) {
-    guessLetter(letter);
+    return;
+  };
+
+  if (guess.length === 1 && "ABCDEFGHIJKLMNOPQRSTUVWXYZ".includes(guess)) {
+    console.log(`Guessing letter ${guess}`)
+    guessLetter(guess);
   } else {
-    const guess = args.trim().toUpperCase()
+    console.log(`Guessing puzzle ${guess}`)
     guessThePuzzle(guess);
   }
 })
 
-function guessLetter(letter: string) {
-  guesses.value.push(letter);
+function guessLetter(guess: string) {
+  guesses.value.push(guess);
 }
 
-function guessThePuzzle(guess: string | undefined) {
+function guessThePuzzle(guess: string) {
   if (guess === puzzle.value) {
     console.log("You did it.")
     for (var val of puzzle.value.split("")) {
       guessLetter(val);
-    }
-    // THIS DOESN'T WORK
-    var winScreenTimeUp = 5000 // 5 seconds
-    const winScreen = async () => {
-      await delay(winScreenTimeUp);
-      // PAUSEGAME = false;
-      console.log("resetting...")
-      resetGame();
     }
   }
   else {
@@ -79,7 +70,9 @@ function guessThePuzzle(guess: string | undefined) {
 }
 
 function resetGame() {
-  guesses.value = []
+  console.log("I'm always resetting.")
+  // guesses.value = [];  // THIS DOESNT WORK?!  FOR SOME REASON!?
+  console.log("GV: ", guesses.value)
   puzzleData.value = GetPuzzle();
 }
 

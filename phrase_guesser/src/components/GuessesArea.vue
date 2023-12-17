@@ -33,6 +33,7 @@ onUpdated(() => {
 });
 
 watch(props.guesses, () => {
+    console.log("I'm watching here!", props.guesses)
     lettersLeft.value = DisplayGuessesLetters();
 })
 
