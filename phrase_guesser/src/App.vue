@@ -79,6 +79,7 @@ function guessThePuzzle(guess: string | undefined) {
 }
 
 function resetGame() {
+  guesses.value = []
   puzzleData.value = GetPuzzle();
 }
 
