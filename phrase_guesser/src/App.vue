@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, type Ref, watch } from "vue";
+import { onMounted, ref, type Ref, watch, onActivated } from "vue";
 
 import PuzzleArea from './components/PuzzleArea.vue'
 import CategoryArea from './components/CategoryArea.vue'
@@ -9,6 +9,7 @@ import tmi from "tmi.js";
 
 import { GetPuzzle } from './puzzle'
 
+const ALPHABET: string[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
 
 const scores: Ref<{ user: string, score: number }[]> = ref([
   { "user": "Melat0nin", "score": 10 },
@@ -20,10 +21,17 @@ const puzzleData: Ref<{ category: string, puzzle: string }> = ref({ category: ""
 const puzzle: Ref<string> = ref("")
 const category: Ref<string> = ref("")
 const guesses: Ref<string[]> = ref([])
+const solved: Ref<boolean> = ref(false)
 
 onMounted(() => {
+  setInterval(RunRandomGuesses, 5000);
   resetGame();
 });
+
+function RunRandomGuesses() {
+  if (solved.value) return;
+  makeRandomGuess()
+}
 
 watch(puzzleData, async (newData: { category: string, puzzle: string }) => {
   console.log(newData);
@@ -37,18 +45,20 @@ const client = new tmi.Client({
 
 client.connect();
 client.on('message', (channel, tags, message, self) => {
-  let guess: string = message.trim().toUpperCase()
-  console.log(guess)
-  if (guess === "!RESET") {
-    resetGame();
-    return;
-  };
+  if (self || !message.startsWith('!')) return;
 
-  if (guess.length === 1 && "ABCDEFGHIJKLMNOPQRSTUVWXYZ".includes(guess)) {
-    console.log(`Guessing letter ${guess}`)
-    guessLetter(guess);
-  } else {
-    console.log(`Guessing puzzle ${guess}`)
+  const args = message.slice(1).split(' ');
+  const command = args.shift()?.toUpperCase();
+  const guess = args.join(" ").trim().toUpperCase();
+
+  console.log(args, command, guess)
+
+  if (command === 'RESET') {
+    resetGame();
+  }
+  else if (command === 'SOLVE') {
+    console.log(`Solving puzzle ${guess}`)
+    if (solved.value) return;
     guessThePuzzle(guess);
   }
 })
@@ -57,12 +67,34 @@ function guessLetter(guess: string) {
   guesses.value.push(guess);
 }
 
+function makeRandomGuess() {
+  let acc = 0;
+  let randAlpha: string = ""
+  while (acc < 200) {
+    acc += 1 // Failsafe.
+    randAlpha = ALPHABET[Math.floor(Math.random() * ALPHABET.length)]
+    if (!guesses.value.includes(randAlpha)) {
+      console.log("Guessing ", randAlpha)
+      break;
+    }
+  }
+  if (!guesses.value.includes(randAlpha)) {
+    guessLetter(randAlpha)
+  }
+}
+
 function guessThePuzzle(guess: string) {
+
   if (guess === puzzle.value) {
     console.log("You did it.")
+    solved.value = true;
+
     for (var val of puzzle.value.split("")) {
       guessLetter(val);
     }
+    setTimeout(() => {
+      resetGame()
+    }, 5000);
   }
   else {
     console.log("You are the greatest fool.")
@@ -70,10 +102,9 @@ function guessThePuzzle(guess: string) {
 }
 
 function resetGame() {
-  console.log("I'm always resetting.")
-  // guesses.value = [];  // THIS DOESNT WORK?!  FOR SOME REASON!?
-  console.log("GV: ", guesses.value)
+  guesses.value.splice(0);
   puzzleData.value = GetPuzzle();
+  solved.value = false;
 }
 
 </script>
